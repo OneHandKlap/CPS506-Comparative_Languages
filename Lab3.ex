@@ -18,5 +18,5 @@ defmodule Lab3 do
         length(list)==2 &&
             is_number(hd(list))&&
             is_number(hd(tl(list)))
-        end
+    end
 end
