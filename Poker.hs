@@ -1,6 +1,8 @@
 import System.IO
 import Data.List
+import Control.Monad
 import Data.Set
+import Data.List
 
 pokerHands = [(0,"None"),(1,"Pair"),(2,"Two Pair"),(3,"Three of a Kind"),(4,"Straight"),(5,"Flush"),(6,"Full House"),(7,"Four of a Kind"),(8,"Straight Flush")]
 handNoSuit list  = [((x-1) `mod` 13)+1 | x<-list]
@@ -82,3 +84,9 @@ compareHands listOfHands
     | otherwise = getReadableHand(compareHighSuits (listToTup (pokerNums (listOfHands !! 0))) (listToTup (pokerNums (listOfHands !! 1))))
 
 deal tenCards = sort(compareHands(makeHands tenCards))
+
+
+main = forever $ do  
+    putStr "Give me some input: "  
+    l <- getLine  
+    putStrLn $ (deal (read l :: [Int]))
