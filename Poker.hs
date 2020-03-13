@@ -63,8 +63,8 @@ detectPairs list
 injectPair :: Int -> [Int] -> [Int] -> [Int]
 injectPair x hand [] = [x] 
 injectPair x hand (y:ys) = if (length (occurences x hand)) <= length((occurences y hand))
-                            then x:y:ys
-                            else y : (injectPair x hand ys)
+                            then y:x:ys
+                            else x : (injectPair y hand ys)
 sortPair originalHand hand acc
     | hand ==[] = acc
     | otherwise = sortPair originalHand (tail hand) (injectPair (head hand) originalHand acc)
@@ -105,10 +105,12 @@ compareStraights hand1 hand2
 compareHands listOfHands
     | handVal ( listOfHands !! 0) >handVal (listOfHands !! 1) = readableHand (listOfHands !! 0)
     | handVal ( listOfHands !! 1) >handVal (listOfHands !! 0) = readableHand (listOfHands !! 1)
-    | has [1,2,3,6,7] (handVal ( listOfHands !! 1)) = getReadableHand(compareHighCards(listToTup (sortPair (pokerNums(listOfHands !!0)) (pokerNums(listOfHands !!0)) [])) (listToTup (sortPair (pokerNums(listOfHands !!1)) (pokerNums(listOfHands !!1)) [])))
+    | (has [1,2,3,6,7] (handVal ( listOfHands !! 1)))&&(compareHighCards(listToTup (sortPair (pokerNums(listOfHands !!0)) (pokerNums(listOfHands !!0)) [])) (listToTup (sortPair (pokerNums(listOfHands !!1)) (pokerNums(listOfHands !!1)) [])))/=[] = getReadableHand(compareHighCards(listToTup (sortPair (pokerNums(listOfHands !!0)) (pokerNums(listOfHands !!0)) [])) (listToTup (sortPair (pokerNums(listOfHands !!1)) (pokerNums(listOfHands !!1)) [])))
     | (has [4,8] (handVal ( listOfHands !! 1))) && (compareStraights (pokerNums(listOfHands !!0))  (pokerNums(listOfHands !!1)))/=[]= getReadableHand (compareStraights (pokerNums(listOfHands !!0))  (pokerNums(listOfHands !!1)))
     | (compareHighCards (listToTup ((pokerNums (listOfHands !! 0)))) (listToTup ((pokerNums (listOfHands !! 1))))) /= [] = getReadableHand(compareHighCards (listToTup ((pokerNums (listOfHands !! 0)))) (listToTup ((pokerNums (listOfHands !! 1)))))
-    | otherwise = getReadableHand(compareHighSuits (listToTup (pokerNums (listOfHands !! 0))) (listToTup (pokerNums (listOfHands !! 1))))
+    | otherwise = getReadableHand (compareHighSuits (listToTup (reverse(sortBetter (pokerNums (listOfHands !! 0)) []))) (listToTup (reverse(sortBetter (pokerNums (listOfHands !! 1)) []))))
+
+
 
 deal tenCards = compareHands(makeHands tenCards)
 
