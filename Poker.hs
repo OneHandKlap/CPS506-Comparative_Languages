@@ -27,7 +27,7 @@ unique (x:xs)
   | otherwise = x : unique xs
 
 listToTup list = (list,list)
-getReadableHand hand = [show (((x-1) `mod` 13)+1) ++ ["C","D","H","S","S"] !! ((x-1) `div` 13) | x<- hand]
+getReadableHand hand = [show (((x-1) `mod` 13)+1) ++ ["C","D","H","S","S"] !! ((x-1) `div` 13) | x<- (sortBetter hand [])]
 
 detectStraight hand = isStraight (sort(handNoSuit hand)) True
 
@@ -46,11 +46,12 @@ isFlush list num
     | length [x | x<- handToSuit list, x==num] == 5 = True
     | otherwise = False
 
-occurences num list = [x| x<- unique list, x==num]
+occurencesUnique num list = [x| x<- unique list, x==num]
+occurences num list = [x| x<- list, x==num]
 
 getPairs (x:xs) acc
     | xs==[] = acc
-    | otherwise = getPairs xs (acc++ (occurences x xs))
+    | otherwise = getPairs xs (acc++ (occurencesUnique x xs))
 
 detectPairs list
     | (unique list == list) && (length list ==1) = 1
@@ -59,16 +60,14 @@ detectPairs list
     | (length list == 3) && length (unique list)==1 = 7
     | otherwise = 0
 
-
--- injectPair :: Int -> [Int] ->[Int] -> [Int]
--- injectPair x hand [] = [x] 
--- injectPair x hand (y:ys) = if (occurences x hand)<= (occurences y hand)
---                   then x:y:ys
---                   else y : inject x hand ys
--- sortPair hand acc
---     | hand==[] = acc
---     | inject (head hand) 
-
+injectPair :: Int -> [Int] -> [Int] -> [Int]
+injectPair x hand [] = [x] 
+injectPair x hand (y:ys) = if (length (occurences x hand)) <= length((occurences y hand))
+                            then x:y:ys
+                            else y : (injectPair x hand ys)
+sortPair originalHand hand acc
+    | hand ==[] = acc
+    | otherwise = sortPair originalHand (tail hand) (injectPair (head hand) originalHand acc)
 
 compareHighCards tup1 tup2
     | head (handNoSuit(snd tup1)) == head (handNoSuit((snd tup2))) && length(snd tup1)==1 =[]
@@ -78,7 +77,9 @@ compareHighCards tup1 tup2
     | head (handNoSuit(snd tup1)) > head (handNoSuit(snd tup2)) = fst tup1
     | head (handNoSuit(snd tup2)) > head (handNoSuit(snd tup1)) = fst tup2
 
-compareHighSuits tup1 tup2 
+compareHighSuits tup1 tup2
+    | (((head (handNoSuit(snd tup1)))`mod` 13) ==1) && (((head (handNoSuit(snd tup1)))`mod` 13)>1) = fst tup1
+    | (((head (handNoSuit(snd tup2))) `mod` 13) ==1) && (((head (handNoSuit(snd tup2))) `mod` 13)>1) = fst tup2
     | head ((snd tup1)) == head (((snd tup2))) && length(snd tup1)==1 =[]
     | head ((snd tup1)) == head ((snd tup2)) = compareHighCards (fst tup1, (tail (snd tup1))) (fst tup2, (tail (snd tup2)))
     | head ((snd tup1)) > head ((snd tup2)) = fst tup1
@@ -96,10 +97,17 @@ getHandValName num = snd(pokerHands !! num)
 
 makeHands list = (Hand {pokerNums=(sortBetter ((separateHands list) !! 0) []) , readableHand= getReadableHand (sortBetter((separateHands list) !! 0)[]), handVal = getHandVal ((separateHands list) !! 0), handValName = getHandValName (getHandVal ((separateHands list) !! 0))}) : (Hand {pokerNums=(sortBetter ((separateHands list) !! 1) []), readableHand= getReadableHand (sortBetter((separateHands list) !! 1)[]), handVal = getHandVal ((separateHands list) !! 1), handValName = getHandValName (getHandVal ((separateHands list) !! 1))}) :[]
 
+compareStraights hand1 hand2
+    | (((last hand1)-1)`mod`13)+1 > (((last hand2)-1)`mod`13)+1 = hand1
+    | (((last hand2)-1)`mod`13)+1 > (((last hand1)-1)`mod`13)+1 = hand2
+    | otherwise = []
+
 compareHands listOfHands
     | handVal ( listOfHands !! 0) >handVal (listOfHands !! 1) = readableHand (listOfHands !! 0)
     | handVal ( listOfHands !! 1) >handVal (listOfHands !! 0) = readableHand (listOfHands !! 1)
-    | compareHighCards (listToTup ((pokerNums (listOfHands !! 0)))) (listToTup ((pokerNums (listOfHands !! 1)))) /= [] = getReadableHand(compareHighCards (listToTup ((pokerNums (listOfHands !! 0)))) (listToTup ((pokerNums (listOfHands !! 1)))))
+    | has [1,2,3,6,7] (handVal ( listOfHands !! 1)) = getReadableHand(compareHighCards(listToTup (sortPair (pokerNums(listOfHands !!0)) (pokerNums(listOfHands !!0)) [])) (listToTup (sortPair (pokerNums(listOfHands !!1)) (pokerNums(listOfHands !!1)) [])))
+    | (has [4,8] (handVal ( listOfHands !! 1))) && (compareStraights (pokerNums(listOfHands !!0))  (pokerNums(listOfHands !!1)))/=[]= getReadableHand (compareStraights (pokerNums(listOfHands !!0))  (pokerNums(listOfHands !!1)))
+    | (compareHighCards (listToTup ((pokerNums (listOfHands !! 0)))) (listToTup ((pokerNums (listOfHands !! 1))))) /= [] = getReadableHand(compareHighCards (listToTup ((pokerNums (listOfHands !! 0)))) (listToTup ((pokerNums (listOfHands !! 1)))))
     | otherwise = getReadableHand(compareHighSuits (listToTup (pokerNums (listOfHands !! 0))) (listToTup (pokerNums (listOfHands !! 1))))
 
 deal tenCards = compareHands(makeHands tenCards)
@@ -118,41 +126,41 @@ sortBetter list acc
 
 
 
--- main = do
+main = do
 
---     putStrLn ("Result: "++show(deal [1, 40, 10, 49, 11, 50, 12, 51, 13, 52])++ " Correct Result: "++show(["1S", "10S", "11S", "12S", "13S"]))
---     putStrLn ("Result: "++show(deal [1, 14, 2, 15, 3, 16, 4, 17, 5, 18])++ " Correct Result: "++show(["1D", "2D", "3D", "4D", "5D"]))
---     putStrLn (  "Result: "++show(deal [2, 15, 3, 16, 4, 17, 5, 18, 6, 19])++ "Correct Result: "++show(["2D", "3D", "4D", "5D", "6D"]))
---     putStrLn (  "Result: "++show(deal [3, 15, 4, 16, 5, 17, 6, 18, 7, 19])++ "Correct Result: "++show(["3C", "4C", "5C", "6C", "7C"]))
---     putStrLn (  "Result: "++show(deal [1, 26, 2, 25, 3, 24, 4, 23, 5, 22])++ "Correct Result: "++show(["9D", "10D", "11D", "12D", "13D"]))
---     putStrLn (  "Result: "++show(deal [26, 1, 25, 2, 24, 3, 23, 4, 22, 5])++ "Correct Result: "++show(["9D", "10D", "11D", "12D", "13D"]))
+    putStrLn ("Result: "++show(deal [1, 40, 10, 49, 11, 50, 12, 51, 13, 52])++ " Correct Result: "++show(["1S", "10S", "11S", "12S", "13S"]))
+    putStrLn ("Result: "++show(deal [1, 14, 2, 15, 3, 16, 4, 17, 5, 18])++ " Correct Result: "++show(["1D", "2D", "3D", "4D", "5D"]))
+    putStrLn (  "Result: "++show(deal [2, 15, 3, 16, 4, 17, 5, 18, 6, 19])++ "Correct Result: "++show(["2D", "3D", "4D", "5D", "6D"]))
+    putStrLn (  "Result: "++show(deal [3, 15, 4, 16, 5, 17, 6, 18, 7, 19])++ "Correct Result: "++show(["3C", "4C", "5C", "6C", "7C"]))
+    putStrLn (  "Result: "++show(deal [1, 26, 2, 25, 3, 24, 4, 23, 5, 22])++ "Correct Result: "++show(["9D", "10D", "11D", "12D", "13D"]))
+    putStrLn (  "Result: "++show(deal [26, 1, 25, 2, 24, 3, 23, 4, 22, 5])++ "Correct Result: "++show(["9D", "10D", "11D", "12D", "13D"]))
 
 
---     putStrLn (  "Result: "++show(deal [1, 2, 14, 15, 27, 28, 40, 41, 3, 4])++ "Correct Result: "++show( ["1S", "1H", "1D", "1C", "3C"]))
---     putStrLn (  "Result: "++show(deal [11, 12, 24, 25, 37, 38, 50, 51, 3, 4])++ "Correct Result: "++show(["4C", "12S", "12H", "12D", "12C"]))
+    putStrLn (  "Result: "++show(deal [1, 2, 14, 15, 27, 28, 40, 41, 3, 4])++ "Correct Result: "++show( ["1S", "1H", "1D", "1C", "3C"]))
+    putStrLn (  "Result: "++show(deal [11, 12, 24, 25, 37, 38, 50, 51, 3, 4])++ "Correct Result: "++show(["4C", "12S", "12H", "12D", "12C"]))
 
---     putStrLn (  "Result: "++show(deal [9, 10, 22, 23, 35, 36, 3, 4, 16, 17])++ "Correct Result: "++show( ["4D", "4C", "10H", "10D", "10C"]))
---     putStrLn (  "Result: "++show(deal [2, 1, 15, 14, 28, 27, 3, 4, 16, 17])++ "Correct Result: "++show(["1H", "1D", "1C", "4D", "4C"]))
+    putStrLn (  "Result: "++show(deal [9, 10, 22, 23, 35, 36, 3, 4, 16, 17])++ "Correct Result: "++show( ["4D", "4C", "10H", "10D", "10C"]))
+    putStrLn (  "Result: "++show(deal [2, 1, 15, 14, 28, 27, 3, 4, 16, 17])++ "Correct Result: "++show(["1H", "1D", "1C", "4D", "4C"]))
 
---     putStrLn (  "Result: "++show(deal [2, 41, 4, 43, 6, 45, 7, 47, 10, 49])++ "Correct Result: "++show( ["2S", "4S", "6S", "8S", "10S"]))
---     putStrLn (  "Result: "++show(deal [2, 41, 4, 43, 6, 45, 7, 46, 10, 49])++ "Correct Result: "++show(["2S", "4S", "6S", "7S", "10S"]))
---     putStrLn (  "Result: "++show(deal [2, 41, 4, 42, 6, 45, 7, 46, 10, 49])++ "Correct Result: "++show(["2C", "4C", "6C", "7C", "10C"]))
---     putStrLn (  "Result: "++show(deal [2, 41, 3, 42, 6, 45, 7, 46, 10, 49])++ "Correct Result: "++show(["2S", "3S", "6S", "7S", "10S"]))
+    putStrLn (  "Result: "++show(deal [2, 41, 4, 43, 6, 45, 7, 47, 10, 49])++ "Correct Result: "++show( ["2S", "4S", "6S", "8S", "10S"]))
+    putStrLn (  "Result: "++show(deal [2, 41, 4, 43, 6, 45, 7, 46, 10, 49])++ "Correct Result: "++show(["2S", "4S", "6S", "7S", "10S"]))
+    putStrLn (  "Result: "++show(deal [2, 41, 4, 42, 6, 45, 7, 46, 10, 49])++ "Correct Result: "++show(["2C", "4C", "6C", "7C", "10C"]))
+    putStrLn (  "Result: "++show(deal [2, 41, 3, 42, 6, 45, 7, 46, 10, 49])++ "Correct Result: "++show(["2S", "3S", "6S", "7S", "10S"]))
 
---     putStrLn (  "Result: "++show(deal [12, 25, 51, 38, 22, 9, 35, 48, 2, 15])++ "Correct Result: "++show( ["2C", "9H", "9D", "12S", "12C"]))
---     putStrLn (  "Result: "++show(deal [12, 25, 51, 38, 22, 9, 35, 48, 2, 16])++ "Correct Result: "++show(["3D", "9S", "9C", "12H", "12D"]))
---     putStrLn (  "Result: "++show(deal [12, 25, 51, 38, 22, 8, 35, 47, 2, 16])++ "Correct Result: "++show(["2C", "9H", "9D", "12S", "12C"]))
---     putStrLn (  "Result: "++show(deal [12, 26, 51, 39, 22, 8, 35, 47, 2, 16])++ "Correct Result: "++show(["3D", "8S", "8C", "13H", "13D"]))
+    putStrLn (  "Result: "++show(deal [12, 25, 51, 38, 22, 9, 35, 48, 2, 15])++ "Correct Result: "++show( ["2C", "9H", "9D", "12S", "12C"]))
+    putStrLn (  "Result: "++show(deal [12, 25, 51, 38, 22, 9, 35, 48, 2, 16])++ "Correct Result: "++show(["3D", "9S", "9C", "12H", "12D"]))
+    putStrLn (  "Result: "++show(deal [12, 25, 51, 38, 22, 8, 35, 47, 2, 16])++ "Correct Result: "++show(["2C", "9H", "9D", "12S", "12C"]))
+    putStrLn (  "Result: "++show(deal [12, 26, 51, 39, 22, 8, 35, 47, 2, 16])++ "Correct Result: "++show(["3D", "8S", "8C", "13H", "13D"]))
 
---     putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 22, 8, 47, 7, 33])++ "Correct Result: "++show(["7C", "8C", "9C", "13S", "13C"]))
---     putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 22, 8, 47, 6, 33])++ "Correct Result: "++show(["7H", "8S", "9D", "13H", "13D"]))
---     putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 22, 7, 21, 6, 19])++ "Correct Result: "++show(["6D", "8D", "9D", "13H", "13D"]))
---     putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 11, 7, 20, 6, 19])++ "Correct Result: "++show(["6D", "7D", "11C", "13H", "13D"]))
---     putStrLn (  "Result: "++show(deal [13, 25, 52, 38, 9, 11, 7, 20, 6, 19])++ "Correct Result: "++show(["6C", "7C", "9C", "13S", "13C"]))
+    putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 22, 8, 47, 7, 33])++ "Correct Result: "++show(["7C", "8C", "9C", "13S", "13C"]))
+    putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 22, 8, 47, 6, 33])++ "Correct Result: "++show(["7H", "8S", "9D", "13H", "13D"]))
+    putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 22, 7, 21, 6, 19])++ "Correct Result: "++show(["6D", "8D", "9D", "13H", "13D"]))
+    putStrLn (  "Result: "++show(deal [13, 26, 52, 39, 9, 11, 7, 20, 6, 19])++ "Correct Result: "++show(["6D", "7D", "11C", "13H", "13D"]))
+    putStrLn (  "Result: "++show(deal [13, 25, 52, 38, 9, 11, 7, 20, 6, 19])++ "Correct Result: "++show(["6C", "7C", "9C", "13S", "13C"]))
 
---     putStrLn (  "Result: "++show(deal [1, 40, 16, 29, 5, 44, 8, 21, 12, 25])++ "Correct Result: "++show( ["1S", "3H", "5S", "8D", "12D"]))
---     putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 5, 44, 8, 21, 12, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
---     putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 4, 44, 8, 21, 12, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
---     putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 4, 44, 7, 21, 12, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
---     putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 4, 44, 7, 21, 11, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
---     putStrLn (  "Result: "++show(deal [1, 39, 15, 29, 4, 44, 7, 21, 12, 25])++ "Correct Result: "++show(["1C", "2D", "4C", "7C", "12C"]))
+    putStrLn (  "Result: "++show(deal [1, 40, 16, 29, 5, 44, 8, 21, 12, 25])++ "Correct Result: "++show( ["1S", "3H", "5S", "8D", "12D"]))
+    putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 5, 44, 8, 21, 12, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
+    putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 4, 44, 8, 21, 12, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
+    putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 4, 44, 7, 21, 12, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
+    putStrLn (  "Result: "++show(deal [1, 40, 15, 29, 4, 44, 7, 21, 11, 25])++ "Correct Result: "++show(["1S", "3H", "5S", "8D", "12D"]))
+    putStrLn (  "Result: "++show(deal [1, 39, 15, 29, 4, 44, 7, 21, 12, 25])++ "Correct Result: "++show(["1C", "2D", "4C", "7C", "12C"]))
