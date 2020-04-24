@@ -1,3 +1,11 @@
+{-|
+Yu Xing Wu 500901559
+P. Adam Aboud 500883647
+-}
+
+
+
+
 module Poker where
 
 import System.IO
@@ -6,7 +14,6 @@ import Control.Monad
 import Data.Set
 import Data.List
 import Data.Map as Map
-
 
 pokerHands = [(0,"None"),(1,"Pair"),(2,"Two Pair"),(3,"Three of a Kind"),(4,"Straight"),(5,"Flush"),(6,"Full House"),(7,"Four of a Kind"),(8,"Straight Flush")]
 
@@ -148,4 +155,23 @@ compareHands listOfHands
 deal tenCards = compareHands(makeHands tenCards)
 
 
--- --Test Cases
+compareCards hand1 hand2 [] [] = []
+compareCards hand1 hand2 (x:xs) (y:ys)
+    | x==y = compareCards hand1 hand2 xs ys
+    | x>y = hand1
+    | x<y = hand2
+
+detectHighCard:: [Int]->[Int]->[Int]
+detectHighCard hand1 hand2
+    | (head (sort hand1)) == 1 && (head(sort hand2))/=1 = hand1
+    | (head (sort hand1)) /= 1 && (head(sort hand2))==1 = hand2
+    | otherwise = compareCards hand1 hand2 (reverse(sort hand1)) (reverse(sort hand2))
+
+
+
+hasDifferentItems []=False
+hasDifferentItems (x:xs)
+    |x== head xs = hasDifferentItems xs
+    |otherwise = True
+
+detectFlush2 list= !(hasDifferentItems(div list))
